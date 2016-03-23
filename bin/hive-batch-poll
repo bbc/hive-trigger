@@ -1,0 +1,98 @@
+#!/usr/bin/env ruby
+require 'optparse'
+require 'rubygems'
+require 'json'
+
+DEFAULT_TIMEOUT=600
+
+options = {}
+OptionParser.new do |opts|
+  opts.banner = "Usage: hive-trigger.rb [options]"
+ 
+  opts.on("-u", "--url URL", "Hive Scheduler URL") do |u|
+    options[:url] = u 
+  end
+    
+  opts.on("-b", "--batch-id NUM", "Batch ID") do |b|
+     options[:batch_id] = b
+  end
+    
+  opts.on("--environment ENV", "Hive environment, leave blank for live") do |e|
+    options[:environment] = e
+  end
+    
+  opts.on("--cacert PATH", "Path to the ca bundle") do |c|
+    options[:cacert] = c
+  end
+    
+  opts.on("--cert PATH", "Path to your cert") do |c|
+    options[:cert] = c
+  end
+    
+  opts.on("--timeout PATH", "Amount of time to wait for test results") do |t|
+    options[:timeout] = t
+  end
+    
+end.parse!
+
+
+
+errors = []
+batch_id = options[:batch_id] or errors.push "Need a hive batch ID: -b n"
+url = options[:url] or errors.push "Need a url for the scheduler: --url http://hive.blah"
+env = options[:environment]
+env = nil if env == "live"
+timeout = options[:timeout] || DEFAULT_TIMEOUT
+cacert = options[:cacert]
+cert = options[:cert]
+
+puts "Timeout set to: #{timeout} seconds"
+
+if errors.length >= 1
+    puts "Missing arguments:\n  * " + errors.join( "\n  * ")
+    exit 1
+end
+
+# Once the build is uploaded, create the batches
+base_url = "#{url}/api/batches/" + batch_id.to_s + '.json'
+batch_url = "#{url}/batches/" + batch_id.to_s
+t1=Time.now
+puts "Waiting for job to complete will timeout after #{timeout} seconds if Pass/Fail/Error state not returned from the batch-id."
+puts "To see current status see: #{batch_url}"
+
+curl_bin = ENV['CURL_BIN'] || 'curl'
+
+curl_cmd = [ curl_bin, '-l', base_url ]
+
+curl_cmd << '--cert' << cert if cert
+curl_cmd << '--cacert' << cacert if cacert
+
+curl_line = curl_cmd.join(' ')
+
+(timeout.to_i/10).times{|poll_number|
+    out = `#{curl_line} 2>/dev/null`
+    unless /Exception.caught/.match(out)
+        puts "Current job status: #{JSON.parse(out)['state']}"
+        
+        if JSON.parse(out)['state'] == 'passed'
+            puts "Script took #{Time.now-t1} seconds"
+            puts "SUCCESS: Job passed. View results: #{batch_url}"
+            exit(0)
+        end
+        if JSON.parse(out)['state'].include?('fail')
+            puts "Script took #{Time.now-t1} seconds"
+            puts "ERROR: Job failed! View results: #{batch_url}"
+            exit(1)
+        end
+        if JSON.parse(out)['state'].include?('error')
+            puts "Script took #{Time.now-t1} seconds"
+            puts "ERROR: Job errored! View results: #{batch_url}"
+            exit(1)
+        end
+        sleep 10
+    end
+}
+
+puts "Script took #{Time.now-t1} seconds"
+puts "View results: #{batch_url}"
+exit(1)

@@ -1,0 +1,95 @@
+#!/usr/bin/env ruby
+require 'optparse'
+
+options = {}
+OptionParser.new do |opts|
+    opts.banner = "Usage: hive-trigger [options]"
+    
+    opts.on("-u", "--url URL", "Hive Scheduler URL") do |u|
+      options[:url] = u 
+    end
+    
+    opts.on("-p", "--project-id NUM", "Hive Project ID") do |p|
+        options[:project_id] = p
+    end
+    
+    opts.on("-b", "--build BUILD_PATH", "Path to the build binary") do |b|
+        options[:build] = b
+    end
+    
+    opts.on("-n", "--number-of-tests-per-job TESTS_PER_JOB", "Number of tests that should be allocated to a specific job, change this number to allow greater parallelization") do |n|
+        options[:number] = n
+    end
+    
+    opts.on("-v" "--version VERSION_STRING", "String identifying the version of the thing you are testing") do |v|
+        options[:version] = v
+    end
+    
+    opts.on("--cacert PATH", "Path to the ca bundle") do |c|
+        options[:cacert] = c
+    end
+    
+    opts.on("--cert PATH", "Path to your cert") do |c|
+        options[:cert] = c
+    end
+    
+    
+end.parse!
+
+errors = []
+project_id = options[:project_id] or errors.push "Need a hive project ID"
+url = options[:url] or errors.push "Need to provide the url of the scheduler"
+build = options[:build] or errors.push "Need a build binary"
+version = options[:version] or errors.push "Need a version string to identify the build"
+
+cacert = options[:cacert]
+cert = options[:cert]
+
+
+#errors.push "Couldn't see file '#{build}'" if build && !File.exist?(build)
+
+if errors.length >= 1
+    puts "Missing arguments:\n  * " + errors.join( "\n  * ")
+    exit 1
+end
+
+
+#puts "Hive Plan ID: " + project_id
+#puts "Build:        " + build
+#puts "Version       " + version
+#puts "Using certs" if cert
+
+
+# Once the build is uploaded, create the batches
+base_url = "#{url}/api/batches"
+
+curl_bin = ENV['CURL_BIN'] || 'curl'
+
+curl_cmd = [ curl_bin, '-l', base_url ]
+
+curl_cmd << '--cert' << cert if cert
+curl_cmd << '--cacert' << cacert if cacert
+curl_cmd << '--insecure' if !cacert
+
+curl_cmd << '--form' << "version=#{version}"
+curl_cmd << '--form' << "project_id=#{project_id}"
+
+curl_cmd << '--form' << "build=@#{build}"
+
+curl_line = curl_cmd.join(' ')
+
+#puts curl_line
+
+out = `#{curl_line}`
+
+if /id/.match(out)
+    /(\d+)/.match(out)
+    batch = $1.to_i
+    puts "#{url}/batches/" + batch.to_s
+    puts batch.to_s
+    exit(0)
+    else
+    puts "ERROR"
+    exit(1)
+end
+
