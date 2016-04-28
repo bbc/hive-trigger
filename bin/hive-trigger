@@ -9,8 +9,8 @@ OptionParser.new do |opts|
       options[:url] = u 
     end
     
-    opts.on("-i", "--project-id NUM", "Hive Project ID") do |i|
-        options[:project_id] = i
+    opts.on("-p", "--project-id NUM", "Hive Project ID") do |p|
+        options[:project_id] = p
     end
 
     opts.on("-b", "--build BUILD_PATH", "Path to the build binary") do |b|
