@@ -89,6 +89,11 @@ curl_line = curl_cmd.join(' ')
             puts "ERROR: Job errored! View results: #{batch_url}"
             exit(1)
         end
+        if JSON.parse(out)['state'].include?('cancelled')
+            puts "Script took #{Time.now-t1} seconds"
+            puts "ERROR: Job cancelled! View results: #{batch_url}"
+            exit(1)
+        end
         sleep 10
     end
 }

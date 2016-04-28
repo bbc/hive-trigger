@@ -9,16 +9,24 @@ OptionParser.new do |opts|
       options[:url] = u 
     end
     
-    opts.on("-p", "--project-id NUM", "Hive Project ID") do |p|
-        options[:project_id] = p
+    opts.on("-i", "--project-id NUM", "Hive Project ID") do |i|
+        options[:project_id] = i
     end
-    
+
     opts.on("-b", "--build BUILD_PATH", "Path to the build binary") do |b|
         options[:build] = b
     end
-    
+
     opts.on("-n", "--number-of-tests-per-job TESTS_PER_JOB", "Number of tests that should be allocated to a specific job, change this number to allow greater parallelization") do |n|
-        options[:number] = n
+      options[:number] = n
+    end
+
+    opts.on("-t", "--target-information app params", Array, "Target information") do |t|
+        options[:target_information] = t
+    end
+    
+    opts.on("-e", "--execution-variables queues", Array, "Execution variables") do |e|
+        options[:execution_variables] = e
     end
     
     opts.on("-v" "--version VERSION_STRING", "String identifying the version of the thing you are testing") do |v|
@@ -39,8 +47,11 @@ end.parse!
 errors = []
 project_id = options[:project_id] or errors.push "Need a hive project ID"
 url = options[:url] or errors.push "Need to provide the url of the scheduler"
-build = options[:build] or errors.push "Need a build binary"
-version = options[:version] or errors.push "Need a version string to identify the build"
+build = options[:build]
+app = options[:target_information][0]  
+params = options[:target_information][1] 
+queues = options[:execution_variables][0] 
+version = options[:version] or errors.push
 
 cacert = options[:cacert]
 cert = options[:cert]
@@ -73,8 +84,10 @@ curl_cmd << '--insecure' if !cacert
 
 curl_cmd << '--form' << "version=#{version}"
 curl_cmd << '--form' << "project_id=#{project_id}"
-
-curl_cmd << '--form' << "build=@#{build}"
+curl_cmd << '--form' << "build=@#{build}" if build
+curl_cmd << '--form' << "target_information[application_url]=#{app}" if app
+curl_cmd << '--form' << "target_information[application_url_parameters]=#{params}" if params
+curl_cmd << '--form' << "execution_variables[queues]='#{queues}'" if queues
 
 curl_line = curl_cmd.join(' ')
 
@@ -88,8 +101,7 @@ if /id/.match(out)
     puts "#{url}/batches/" + batch.to_s
     puts batch.to_s
     exit(0)
-    else
+else
     puts "ERROR"
     exit(1)
 end
-
