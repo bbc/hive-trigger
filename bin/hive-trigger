@@ -21,11 +21,11 @@ OptionParser.new do |opts|
       options[:number] = n
     end
 
-    opts.on("-t", "--target-information app params", Array, "Target information") do |t|
+    opts.on("-t", "--target-information arg", Array, "Target information") do |t|
         options[:target_information] = t
     end
-    
-    opts.on("-e", "--execution-variables queues", Array, "Execution variables") do |e|
+
+    opts.on("-e", "--execution-variables arg", Array, "Execution variables") do |e|
         options[:execution_variables] = e
     end
     
@@ -48,11 +48,9 @@ errors = []
 project_id = options[:project_id] or errors.push "Need a hive project ID"
 url = options[:url] or errors.push "Need to provide the url of the scheduler"
 build = options[:build]
-app = options[:target_information][0]  
-params = options[:target_information][1] 
-queues = options[:execution_variables][0] 
-version = options[:version] or errors.push
-
+target_info = options[:target_information]
+exec_var = options[:execution_variables]
+version = options[:version] or errors.push "Need the version"
 cacert = options[:cacert]
 cert = options[:cert]
 
@@ -85,9 +83,20 @@ curl_cmd << '--insecure' if !cacert
 curl_cmd << '--form' << "version=#{version}"
 curl_cmd << '--form' << "project_id=#{project_id}"
 curl_cmd << '--form' << "build=@#{build}" if build
-curl_cmd << '--form' << "target_information[application_url]=#{app}" if app
-curl_cmd << '--form' << "target_information[application_url_parameters]=#{params}" if params
-curl_cmd << '--form' << "execution_variables[queues]='#{queues}'" if queues
+
+if target_info
+  target_info.each do |info|
+    target_info = info.split("|")
+    curl_cmd << '--form' << "target_information[#{target_info[0]}]=#{target_info[1]}"
+  end
+end
+
+if exec_var
+  exec_var.each do |var|
+    exec_var = var.split("|")
+    curl_cmd << '--form' << "execution_variables[#{exec_var[0]}]='#{exec_var[1]}'"
+  end
+end
 
 curl_line = curl_cmd.join(' ')
 
