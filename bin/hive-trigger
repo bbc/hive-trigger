@@ -100,7 +100,6 @@ end
 
 curl_line = curl_cmd.join(' ')
 
-#puts curl_line
 
 out = `#{curl_line}`
 
