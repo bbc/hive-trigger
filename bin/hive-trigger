@@ -25,6 +25,10 @@ OptionParser.new do |opts|
         options[:target_information] = t
     end
 
+    opts.on("-q", "--queues queues", "Comma separated values of queues") do |e|
+        options[:queues] = e
+    end
+
     opts.on("-e", "--execution-variables arg", Array, "Execution variables") do |e|
         options[:execution_variables] = e
     end
@@ -48,6 +52,7 @@ errors = []
 project_id = options[:project_id] or errors.push "Need a hive project ID"
 url = options[:url] or errors.push "Need to provide the url of the scheduler"
 build = options[:build]
+queues = options[:queues]
 target_info = options[:target_information]
 exec_var = options[:execution_variables]
 version = options[:version] or errors.push "Need the version"
@@ -83,6 +88,7 @@ curl_cmd << '--insecure' if !cacert
 curl_cmd << '--form' << "version=#{version}"
 curl_cmd << '--form' << "project_id=#{project_id}"
 curl_cmd << '--form' << "build=@#{build}" if build
+curl_cmd << '--form' << "execution_variables[queues]='#{queues}'" if queues
 
 if target_info
   target_info.each do |info|
@@ -102,6 +108,7 @@ curl_line = curl_cmd.join(' ')
 
 
 out = `#{curl_line}`
+#puts "#{curl_line}"
 
 if /id/.match(out)
     /(\d+)/.match(out)
