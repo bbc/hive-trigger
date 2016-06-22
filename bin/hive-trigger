@@ -100,7 +100,6 @@ if exec_var
 end
 
 curl_line = curl_cmd.join(' ')
-p curl_line
 
 
 out = `#{curl_line}`
