@@ -66,9 +66,10 @@ curl_cmd = [ curl_bin, '-l', base_url ]
 
 curl_cmd << '--cert' << cert if cert
 curl_cmd << '--cacert' << cacert if cacert
+curl_cmd << '--insecure' if !cacert
 
 curl_line = curl_cmd.join(' ')
-
+p curl_line
 (timeout.to_i/10).times{|poll_number|
     out = `#{curl_line} 2>/dev/null`
     unless /Exception.caught/.match(out)
