@@ -12,13 +12,21 @@ OptionParser.new do |opts|
     opts.on("-p", "--project-id NUM", "Hive Project ID") do |p|
         options[:project_id] = p
     end
-    
+
     opts.on("-b", "--build BUILD_PATH", "Path to the build binary") do |b|
         options[:build] = b
     end
-    
+
     opts.on("-n", "--number-of-tests-per-job TESTS_PER_JOB", "Number of tests that should be allocated to a specific job, change this number to allow greater parallelization") do |n|
-        options[:number] = n
+      options[:number] = n
+    end
+
+    opts.on("-t", "--target-information arg", Array, "Target information") do |t|
+        options[:target_information] = t
+    end
+
+    opts.on("-e", "--execution-variables arg", Array, "Execution variables") do |e|
+        options[:execution_variables] = e
     end
     
     opts.on("-v" "--version VERSION_STRING", "String identifying the version of the thing you are testing") do |v|
@@ -39,9 +47,10 @@ end.parse!
 errors = []
 project_id = options[:project_id] or errors.push "Need a hive project ID"
 url = options[:url] or errors.push "Need to provide the url of the scheduler"
-build = options[:build] or errors.push "Need a build binary"
-version = options[:version] or errors.push "Need a version string to identify the build"
-
+build = options[:build]
+target_info = options[:target_information]
+exec_var = options[:execution_variables]
+version = options[:version] or errors.push "Need the version"
 cacert = options[:cacert]
 cert = options[:cert]
 
@@ -73,12 +82,25 @@ curl_cmd << '--insecure' if !cacert
 
 curl_cmd << '--form' << "version=#{version}"
 curl_cmd << '--form' << "project_id=#{project_id}"
+curl_cmd << '--form' << "build=@#{build}" if build
 
-curl_cmd << '--form' << "build=@#{build}"
+if target_info
+  target_info.each do |info|
+    target_info = info.split("|")
+    curl_cmd << '--form' << "target_information[#{target_info[0]}]=#{target_info[1]}"
+  end
+end
+
+if exec_var
+  exec_var.each do |var|
+    exec_var = var.split("|")
+    exec_var[1] = exec_var[1].split(' ').join(",") if exec_var[0] == "queues"
+    curl_cmd << '--form' << "execution_variables[#{exec_var[0]}]='#{exec_var[1]}'"
+  end
+end
 
 curl_line = curl_cmd.join(' ')
 
-#puts curl_line
 
 out = `#{curl_line}`
 
@@ -88,8 +110,7 @@ if /id/.match(out)
     puts "#{url}/batches/" + batch.to_s
     puts batch.to_s
     exit(0)
-    else
+else
     puts "ERROR"
     exit(1)
 end
-
