@@ -67,14 +67,19 @@ curl_cmd = [ curl_bin, '-l', base_url ]
 curl_cmd << '--cert' << cert if cert
 curl_cmd << '--cacert' << cacert if cacert
 curl_cmd << '--insecure' if !cacert
+curl_cmd << '--connect-timeout 60'
 
 curl_line = curl_cmd.join(' ')
 p curl_line
 (timeout.to_i/10).times{|poll_number|
     out = `#{curl_line} 2>/dev/null`
     unless /Exception.caught/.match(out)
+      begin
         puts "Current job status: #{JSON.parse(out)['state']}"
-        
+      rescue JSON::ParserError => _
+        puts "ERROR: Failed to connect to hive"
+        exit(1)
+      end
         if JSON.parse(out)['state'] == 'passed'
             puts "Script took #{Time.now-t1} seconds"
             puts "SUCCESS: Job passed. View results: #{batch_url}"
