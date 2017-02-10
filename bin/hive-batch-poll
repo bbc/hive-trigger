@@ -7,7 +7,7 @@ DEFAULT_TIMEOUT=600
 
 options = {}
 OptionParser.new do |opts|
-  opts.banner = "Usage: hive-trigger.rb [options]"
+  opts.banner = "Usage: hive-batch-poll [options]"
  
   opts.on("-u", "--url URL", "Hive Scheduler URL") do |u|
     options[:url] = u 
@@ -29,7 +29,7 @@ OptionParser.new do |opts|
     options[:cert] = c
   end
     
-  opts.on("--timeout PATH", "Amount of time to wait for test results") do |t|
+  opts.on("--timeout SECONDS", "Amount of time to wait for test results") do |t|
     options[:timeout] = t
   end
     
@@ -73,34 +73,57 @@ curl_line = curl_cmd.join(' ')
 p curl_line
 (timeout.to_i/10).times{|poll_number|
     out = `#{curl_line} 2>/dev/null`
+    json = JSON.parse(out)
+    states = {}
+    job_count = 0
+    retries_count = 0
+    json['job_groups'].each do |jg|
+      retried = []
+      jg['jobs'].reverse.each do |j|
+        retried << j['original_job_id'] if j.has_key? 'original_job_id'
+        if ! retried.include? j['id']
+          if states.has_key? j['status']
+            states[j['status']] += 1
+          else
+            states[j['status']] = 1
+          end
+          job_count += 1
+        end
+      end
+      retries_count += retried.length
+    end
     unless /Exception.caught/.match(out)
       begin
-        puts "Current job status: #{JSON.parse(out)['state']}"
+        puts "-------------------------------------------"
+        puts Time.now
+        puts "Current job status: #{json['state']}"
+        puts "Number of jobs: #{job_count}; #{states.keys.map{ |s| "#{s}: #{states[s]}" }.join("; ")}"
+        puts "  (#{retries_count} retries)" if retries_count > 0
       rescue JSON::ParserError => _
         puts "ERROR: Failed to connect to hive"
         exit(1)
       end
-        if JSON.parse(out)['state'] == 'passed'
-            puts "Script took #{Time.now-t1} seconds"
-            puts "SUCCESS: Job passed. View results: #{batch_url}"
-            exit(0)
-        end
-        if JSON.parse(out)['state'].include?('fail')
-            puts "Script took #{Time.now-t1} seconds"
-            puts "ERROR: Job failed! View results: #{batch_url}"
-            exit(1)
-        end
-        if JSON.parse(out)['state'].include?('error')
-            puts "Script took #{Time.now-t1} seconds"
-            puts "ERROR: Job errored! View results: #{batch_url}"
-            exit(1)
-        end
-        if JSON.parse(out)['state'].include?('cancelled')
-            puts "Script took #{Time.now-t1} seconds"
-            puts "ERROR: Job cancelled! View results: #{batch_url}"
-            exit(1)
-        end
-        sleep 10
+      if JSON.parse(out)['state'] == 'passed'
+          puts "Script took #{Time.now-t1} seconds"
+          puts "SUCCESS: Job passed. View results: #{batch_url}"
+          exit(0)
+      end
+      if JSON.parse(out)['state'].include?('fail')
+          puts "Script took #{Time.now-t1} seconds"
+          puts "ERROR: Job failed! View results: #{batch_url}"
+          exit(1)
+      end
+      if JSON.parse(out)['state'].include?('error')
+          puts "Script took #{Time.now-t1} seconds"
+          puts "ERROR: Job errored! View results: #{batch_url}"
+          exit(1)
+      end
+      if JSON.parse(out)['state'].include?('cancelled')
+          puts "Script took #{Time.now-t1} seconds"
+          puts "ERROR: Job cancelled! View results: #{batch_url}"
+          exit(1)
+      end
+      sleep 10
     end
 }
 
