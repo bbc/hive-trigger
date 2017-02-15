@@ -104,7 +104,7 @@ curl_line = curl_cmd.join(' ')
 
 out = `#{curl_line}`
 
-STDERR.puts "Curl CMD Output: #{out}"
+puts "Curl CMD Output: #{out}"
 
 if /id/.match(out)
     /(\d+)/.match(out)
