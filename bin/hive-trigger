@@ -17,11 +17,15 @@ OptionParser.new do |opts|
         options[:build] = b
     end
 
+    opts.on("-r", "--resign RESIGN", "Resign mobile builds 1=RESIGN and 0=NOT RESIGN") do |r|
+        options[:resign] = r
+    end
+
     opts.on("-n", "--number-of-tests-per-job TESTS_PER_JOB", "Number of tests that should be allocated to a specific job, change this number to allow greater parallelization") do |n|
       options[:number] = n
     end
 
-    opts.on("-t", "--target-information arg", Array, "Target information") do |t|
+    opts.on("-t", "--target-information arg", Array, 'Target information. Example arg => "target1|value1,target2|value2,target3|value3" ') do |t|
         options[:target_information] = t
     end
 
@@ -48,6 +52,7 @@ errors = []
 project_id = options[:project_id] or errors.push "Need a hive project ID"
 url = options[:url] or errors.push "Need to provide the url of the scheduler"
 build = options[:build]
+resign = options[:resign]
 target_info = options[:target_information]
 exec_var = options[:execution_variables]
 version = options[:version] or errors.push "Need the version"
@@ -83,6 +88,7 @@ curl_cmd << '--insecure' if !cacert
 curl_cmd << '--form' << "version=#{version}"
 curl_cmd << '--form' << "project_id=#{project_id}"
 curl_cmd << '--form' << "build=@#{build}" if build
+curl_cmd << '--form' << "target_information[resign]=#{resign}" if resign
 
 if target_info
   target_info.each do |info|
@@ -100,7 +106,6 @@ if exec_var
 end
 
 curl_line = curl_cmd.join(' ')
-
 
 out = `#{curl_line}`
 
