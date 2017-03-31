@@ -9,7 +9,7 @@ OptionParser.new do |opts|
       options[:url] = u 
     end
 
-    opts.on("-n", "--batch-name", "Batch name") do |n|
+    opts.on("-n", "--batch-name NAME", "Batch name") do |n|
       options[:batch_name] = n
     end
     
