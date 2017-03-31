@@ -115,6 +115,7 @@ curl_line = curl_cmd.join(' ')
 
 out = `#{curl_line}`
 
+puts "Curl command: #{curl_line}"
 puts "Curl CMD Output: #{out}"
 
 if /id/.match(out)
