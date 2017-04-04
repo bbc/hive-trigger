@@ -17,6 +17,14 @@ OptionParser.new do |opts|
         options[:project_id] = p
     end
 
+    opts.on("-q", "--queue QUEUE", "Queue name") do |q|
+      if options.has_key? :queues
+        options[:queues] << q
+      else
+        options[:queues] = [ q ]
+      end
+    end
+
     opts.on("-b", "--build BUILD_PATH", "Path to the build binary") do |b|
         options[:build] = b
     end
@@ -54,6 +62,7 @@ end.parse!
 
 errors = []
 project_id = options[:project_id] or errors.push "Need a hive project ID"
+queues = options[:queues].join(',') if options[:queues]
 url = options[:url] or errors.push "Need to provide the url of the scheduler"
 build = options[:build]
 resign = options[:resign]
@@ -92,6 +101,7 @@ curl_cmd << '--insecure' if !cacert
 
 curl_cmd << '--form' << "version=#{version}"
 curl_cmd << '--form' << "project_id=#{project_id}"
+curl_cmd << '--form' << "execution_variables[queues]=#{queues}" if queues
 curl_cmd << '--form' << "build=@#{build}" if build
 curl_cmd << '--form' << "target_information[resign]=#{resign}" if resign
 curl_cmd << '--form' << "batch[name]=#{batch_name}" if batch_name
@@ -113,9 +123,8 @@ end
 
 curl_line = curl_cmd.join(' ')
 
-out = `#{curl_line}`
-
 puts "Curl command: #{curl_line}"
+out = `#{curl_line}`
 puts "Curl CMD Output: #{out}"
 
 if /id/.match(out)
