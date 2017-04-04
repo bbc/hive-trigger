@@ -8,6 +8,10 @@ OptionParser.new do |opts|
     opts.on("-u", "--url URL", "Hive Scheduler URL") do |u|
       options[:url] = u 
     end
+
+    opts.on("-n", "--batch-name NAME", "Batch name") do |n|
+      options[:batch_name] = n
+    end
     
     opts.on("-p", "--project-id NUM", "Hive Project ID") do |p|
         options[:project_id] = p
@@ -21,8 +25,8 @@ OptionParser.new do |opts|
         options[:resign] = r
     end
 
-    opts.on("-n", "--number-of-tests-per-job TESTS_PER_JOB", "Number of tests that should be allocated to a specific job, change this number to allow greater parallelization") do |n|
-      options[:number] = n
+    opts.on("-j", "--number-of-tests-per-job TESTS_PER_JOB", "Number of tests that should be allocated to a specific job, change this number to allow greater parallelization") do |j|
+      options[:number] = j
     end
 
     opts.on("-t", "--target-information arg", Array, 'Target information. Example arg => "target1|value1,target2|value2,target3|value3" ') do |t|
@@ -58,6 +62,7 @@ exec_var = options[:execution_variables]
 version = options[:version] or errors.push "Need the version"
 cacert = options[:cacert]
 cert = options[:cert]
+batch_name = options[:batch_name]
 
 
 #errors.push "Couldn't see file '#{build}'" if build && !File.exist?(build)
@@ -89,6 +94,7 @@ curl_cmd << '--form' << "version=#{version}"
 curl_cmd << '--form' << "project_id=#{project_id}"
 curl_cmd << '--form' << "build=@#{build}" if build
 curl_cmd << '--form' << "target_information[resign]=#{resign}" if resign
+curl_cmd << '--form' << "batch[name]=#{batch_name}" if batch_name
 
 if target_info
   target_info.each do |info|
@@ -109,6 +115,7 @@ curl_line = curl_cmd.join(' ')
 
 out = `#{curl_line}`
 
+puts "Curl command: #{curl_line}"
 puts "Curl CMD Output: #{out}"
 
 if /id/.match(out)
