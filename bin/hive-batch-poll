@@ -8,31 +8,35 @@ DEFAULT_TIMEOUT=600
 options = {}
 OptionParser.new do |opts|
   opts.banner = "Usage: hive-batch-poll [options]"
- 
+
   opts.on("-u", "--url URL", "Hive Scheduler URL") do |u|
-    options[:url] = u 
+    options[:url] = u
   end
-    
+
   opts.on("-b", "--batch-id NUM", "Batch ID") do |b|
      options[:batch_id] = b
   end
-    
+
   opts.on("--environment ENV", "Hive environment, leave blank for live") do |e|
     options[:environment] = e
   end
-    
+
   opts.on("--cacert PATH", "Path to the ca bundle") do |c|
     options[:cacert] = c
   end
-    
+
   opts.on("--cert PATH", "Path to your cert") do |c|
     options[:cert] = c
   end
-    
+
   opts.on("--timeout SECONDS", "Amount of time to wait for test results") do |t|
     options[:timeout] = t
   end
-    
+
+  opts.on("--key PATH", "Path to key cert") do |k|
+      options[:key] = k
+  end
+
 end.parse!
 
 
@@ -45,6 +49,7 @@ env = nil if env == "live"
 timeout = options[:timeout] || DEFAULT_TIMEOUT
 cacert = options[:cacert]
 cert = options[:cert]
+key = options[:key]
 
 puts "Timeout set to: #{timeout} seconds"
 
@@ -67,7 +72,8 @@ curl_cmd = [ curl_bin, '-l', base_url ]
 curl_cmd << '--cert' << cert if cert
 curl_cmd << '--cacert' << cacert if cacert
 curl_cmd << '--insecure' if !cacert
-curl_cmd << '--connect-timeout 60'
+curl_cmd << '--key' << key if key
+curl_cmd << '--connect-timeout' << timeout
 
 curl_line = curl_cmd.join(' ')
 p curl_line

@@ -4,15 +4,23 @@ require 'optparse'
 options = {}
 OptionParser.new do |opts|
     opts.banner = "Usage: hive-trigger [options]"
-    
+
     opts.on("-u", "--url URL", "Hive Scheduler URL") do |u|
-      options[:url] = u 
+      options[:url] = u
+    end
+
+    opts.on('-a', '--application_url URL', 'URL of the application') do |a|
+      options[:application_url] = a
+    end
+
+    opts.on('--param', '--application_url_parameters URL', 'Parameters for application') do |p|
+      options[:application_url_parameters] = p
     end
 
     opts.on("-n", "--batch-name NAME", "Batch name") do |n|
       options[:batch_name] = n
     end
-    
+
     opts.on("-p", "--project-id NUM", "Hive Project ID") do |p|
         options[:project_id] = p
     end
@@ -36,20 +44,23 @@ OptionParser.new do |opts|
     opts.on("-e", "--execution-variables arg", Array, "Execution variables") do |e|
         options[:execution_variables] = e
     end
-    
+
     opts.on("-v" "--version VERSION_STRING", "String identifying the version of the thing you are testing") do |v|
         options[:version] = v
     end
-    
+
     opts.on("--cacert PATH", "Path to the ca bundle") do |c|
         options[:cacert] = c
     end
-    
+
     opts.on("--cert PATH", "Path to your cert") do |c|
         options[:cert] = c
     end
-    
-    
+
+    opts.on("--key PATH", "Path to key cert") do |k|
+        options[:key] = k
+    end
+
 end.parse!
 
 errors = []
@@ -63,7 +74,9 @@ version = options[:version] or errors.push "Need the version"
 cacert = options[:cacert]
 cert = options[:cert]
 batch_name = options[:batch_name]
-
+key_path = options[:key]
+app_params = options[:application_url_parameters]
+app_url = options[:application_url]
 
 #errors.push "Couldn't see file '#{build}'" if build && !File.exist?(build)
 
@@ -89,12 +102,16 @@ curl_cmd = [ curl_bin, '-l', base_url ]
 curl_cmd << '--cert' << cert if cert
 curl_cmd << '--cacert' << cacert if cacert
 curl_cmd << '--insecure' if !cacert
+curl_cmd << '--key' << key_path if key_path
 
 curl_cmd << '--form' << "version=#{version}"
 curl_cmd << '--form' << "project_id=#{project_id}"
 curl_cmd << '--form' << "build=@#{build}" if build
 curl_cmd << '--form' << "target_information[resign]=#{resign}" if resign
 curl_cmd << '--form' << "batch[name]=#{batch_name}" if batch_name
+curl_cmd << '--form' << "target_information[application_url]=#{app_url}" if app_url
+curl_cmd << '--form' << "target_information[application_url_parameters]=#{app_params}" if app_params
+
 
 if target_info
   target_info.each do |info|
