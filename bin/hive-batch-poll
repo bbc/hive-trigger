@@ -73,7 +73,7 @@ curl_cmd << '--cert' << cert if cert
 curl_cmd << '--cacert' << cacert if cacert
 curl_cmd << '--insecure' if !cacert
 curl_cmd << '--key' << key if key
-curl_cmd << '--connect-timeout 60'
+curl_cmd << '--connect-timeout' << timeout
 
 curl_line = curl_cmd.join(' ')
 p curl_line
