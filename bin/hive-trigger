@@ -113,18 +113,34 @@ end
 
 curl_line = curl_cmd.join(' ')
 
+puts "Curl CMD #{curl_line}"
 out = `#{curl_line}`
 
-puts "Curl command: #{curl_line}"
-puts "Curl CMD Output: #{out}"
+puts 'Curl CMD Output:'
+puts out
+puts 'End of Curl output'
+puts
 
-if /id/.match(out)
+case out
+  when /Routing Error/
+    puts 'ERROR: Routing Error'
+    puts "Was the Hive URL correct? '#{url}'"
+    exit(1)
+  when /"errors":\["Project not found"\]/
+    puts "ERROR: Project ID '#{project_id}' not found"
+    exit(1)
+  when /id/
     /(\d+)/.match(out)
     batch = $1.to_i
+    puts 'Trigger successful batch ID returned'
     puts "#{url}/batches/" + batch.to_s
     puts batch.to_s
     exit(0)
-else
-    puts "ERROR"
+  else
+    puts 'ERROR: Unknown error returned. Please report the output below to the Titan team.'
+    puts out
+    puts
+    puts 'ERROR: Unknown error returned. Please report the output above to the Titan team.'
     exit(1)
 end
+
