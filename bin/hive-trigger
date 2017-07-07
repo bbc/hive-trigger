@@ -8,6 +8,10 @@ OptionParser.new do |opts|
     opts.on("-u", "--url URL", "Hive Scheduler URL") do |u|
       options[:url] = u 
     end
+
+    opts.on("-n", "--batch-name NAME", "Batch name") do |n|
+      options[:batch_name] = n
+    end
     
     opts.on("-p", "--project-id NUM", "Hive Project ID") do |p|
         options[:project_id] = p
@@ -17,11 +21,15 @@ OptionParser.new do |opts|
         options[:build] = b
     end
 
-    opts.on("-n", "--number-of-tests-per-job TESTS_PER_JOB", "Number of tests that should be allocated to a specific job, change this number to allow greater parallelization") do |n|
-      options[:number] = n
+    opts.on("-r", "--resign RESIGN", "Resign mobile builds 1=RESIGN and 0=NOT RESIGN") do |r|
+        options[:resign] = r
     end
 
-    opts.on("-t", "--target-information arg", Array, "Target information") do |t|
+    opts.on("-j", "--number-of-tests-per-job TESTS_PER_JOB", "Number of tests that should be allocated to a specific job, change this number to allow greater parallelization") do |j|
+      options[:number] = j
+    end
+
+    opts.on("-t", "--target-information arg", Array, 'Target information. Example arg => "target1|value1,target2|value2,target3|value3" ') do |t|
         options[:target_information] = t
     end
 
@@ -48,11 +56,13 @@ errors = []
 project_id = options[:project_id] or errors.push "Need a hive project ID"
 url = options[:url] or errors.push "Need to provide the url of the scheduler"
 build = options[:build]
+resign = options[:resign]
 target_info = options[:target_information]
 exec_var = options[:execution_variables]
 version = options[:version] or errors.push "Need the version"
 cacert = options[:cacert]
 cert = options[:cert]
+batch_name = options[:batch_name]
 
 
 #errors.push "Couldn't see file '#{build}'" if build && !File.exist?(build)
@@ -83,6 +93,8 @@ curl_cmd << '--insecure' if !cacert
 curl_cmd << '--form' << "version=#{version}"
 curl_cmd << '--form' << "project_id=#{project_id}"
 curl_cmd << '--form' << "build=@#{build}" if build
+curl_cmd << '--form' << "target_information[resign]=#{resign}" if resign
+curl_cmd << '--form' << "batch[name]=#{batch_name}" if batch_name
 
 if target_info
   target_info.each do |info|
@@ -98,6 +110,9 @@ if exec_var
     curl_cmd << '--form' << "execution_variables[#{exec_var[0]}]='#{exec_var[1]}'"
   end
 end
+
+curl_line = curl_cmd.join(' ')
+
 
 curl_line = curl_cmd.join(' ')
 
@@ -119,12 +134,12 @@ case out
     puts "ERROR: Project ID '#{project_id}' not found"
     exit(1)
   when /id/
-      /(\d+)/.match(out)
-      batch = $1.to_i
-      puts 'Trigger successful batch ID returned'
-      puts "#{url}/batches/" + batch.to_s
-      puts batch.to_s
-      exit(0)
+    /(\d+)/.match(out)
+    batch = $1.to_i
+    puts 'Trigger successful batch ID returned'
+    puts "#{url}/batches/" + batch.to_s
+    puts batch.to_s
+    exit(0)
   else
     puts 'ERROR: Unknown error returned. Please report the output below to the Titan team.'
     puts out
@@ -133,18 +148,3 @@ case out
     exit(1)
 end
 
-if /id/.match(out)
-    /(\d+)/.match(out)
-    batch = $1.to_i
-    puts 'Trigger successful batch ID returned'
-    puts "#{url}/batches/" + batch.to_s
-    puts batch.to_s
-    exit(0)
-else
-    puts 'Trigger Error, no batch ID returned'
-    puts 'ERROR'
-    puts 'Script returned:'
-    puts out
-    puts
-    exit(1)
-end
