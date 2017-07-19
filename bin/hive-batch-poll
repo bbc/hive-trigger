@@ -127,10 +127,17 @@ p curl_line
     end
 }
 script_time=Time.now-t1
+puts "Script took #{script_time} seconds"
 
-if timeout.to_i >=script_time
+
+if script_time>=timeout.to_i
   puts "ERROR: Job timed out! View results: #{batch_url}"
-  puts "Script took #{script_time} seconds"
+  exit(1)
+else
+  puts "View results: #{batch_url}"
+  puts "Some unknown error occured, failing"
   exit(1)
 end
+
+
 
